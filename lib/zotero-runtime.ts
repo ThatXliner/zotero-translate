@@ -76,6 +76,10 @@ export async function initializeZotero(): Promise<any> {
   
   const srcDir = path.join(__dirname, '..', 'src');
   const modulesDir = path.join(__dirname, '..', 'modules', 'utilities');
+  const exampleDir = path.join(__dirname, '..', 'example');
+  
+  // Load browser globals FIRST
+  loadNodeScript(path.join(__dirname, '..', 'lib', 'browser-globals.js'));
   
   // Load Zotero core files in order
   loadScript(path.join(srcDir, 'zotero.js'));
@@ -94,8 +98,9 @@ export async function initializeZotero(): Promise<any> {
   
   loadScript(path.join(srcDir, 'utilities_translate.js'));
   loadScript(path.join(srcDir, 'debug.js'));
+  // Load base translators first, then example implementation
+  loadScript(path.join(srcDir, 'translators.js'));
   // Use example/http.js, translators.js and translate_item.js which have the real implementations
-  const exampleDir = path.join(__dirname, '..', 'example');
   loadScript(path.join(exampleDir, 'http.js'));
   loadScript(path.join(srcDir, 'translator.js'));
   loadScript(path.join(exampleDir, 'translators.js'));
@@ -105,6 +110,7 @@ export async function initializeZotero(): Promise<any> {
   const translationDir = path.join(srcDir, 'translation');
   loadScript(path.join(translationDir, 'translate.js'));
   loadScript(path.join(translationDir, 'sandboxManager.js'));
+  loadScript(path.join(translationDir, 'translate_item.js'));
   loadScript(path.join(exampleDir, 'translate_item.js'));
   
   loadScript(path.join(srcDir, 'tlds.js'));
@@ -120,7 +126,7 @@ export async function initializeZotero(): Promise<any> {
   loadScript(path.join(rdfDir, 'rdfparser.js'));
   loadScript(path.join(rdfDir, 'serialize.js'));
   
-  // Load Node.js specific implementations
+  // Load Node.js specific implementations (for Zotero.Translators)
   loadNodeScript(path.join(__dirname, '..', 'lib', 'node-implementations.js'));
   
   // Initialize schema (skip if network is unavailable)
