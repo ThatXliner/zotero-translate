@@ -1,0 +1,39 @@
+# Source files (compiled versions in dist/)
+lib/
+tsconfig.json
+
+# Tests
+test/
+testTranslators/
+*.test.ts
+*.spec.ts
+
+# Examples
+example/
+
+# Development files
+.github/
+scripts/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Dependencies (users will install their own)
+node_modules/
+package-lock.json

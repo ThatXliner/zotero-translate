@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vm from 'vm';
 import fetch from 'node-fetch';
 
 // Type declarations for Zotero globals
@@ -24,8 +25,31 @@ let zoteroInitialized = false;
  */
 function loadScript(filepath: string): void {
   const code = fs.readFileSync(filepath, 'utf-8');
-  // Execute in global context
-  eval(code);
+  
+  // Temporarily hide module/require/process to force browser code path
+  const savedModule = (global as any).module;
+  const savedRequire = (global as any).require;
+  const savedProcess = (global as any).process;
+  delete (global as any).module;
+  delete (global as any).require;
+  delete (global as any).process;
+  
+  try {
+    // Use indirect eval to execute in global scope
+    // This is equivalent to browser script tags
+    (0, eval)(code);
+  } finally {
+    // Restore module/require/process
+    if (savedModule !== undefined) {
+      (global as any).module = savedModule;
+    }
+    if (savedRequire !== undefined) {
+      (global as any).require = savedRequire;
+    }
+    if (savedProcess !== undefined) {
+      (global as any).process = savedProcess;
+    }
+  }
 }
 
 /**
