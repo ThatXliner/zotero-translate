@@ -1,0 +1,105 @@
+/**
+ * Zotero Runtime Initialization
+ * This module sets up the Zotero environment for Node.js
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import fetch from 'node-fetch';
+
+// Type declarations for Zotero globals
+declare global {
+  var Zotero: any;
+  var ZOTERO_CONFIG: any;
+  var TRANSLATOR_TYPES: any;
+  var TRANSLATOR_REQUIRED_PROPERTIES: any;
+  var TRANSLATOR_CACHING_PROPERTIES: any;
+  var _translators: any;
+}
+
+let zoteroInitialized = false;
+
+/**
+ * Load and execute a JavaScript file in the global context
+ */
+function loadScript(filepath: string): void {
+  const code = fs.readFileSync(filepath, 'utf-8');
+  // Execute in global context
+  eval(code);
+}
+
+/**
+ * Initialize the Zotero translation environment
+ */
+export async function initializeZotero(): Promise<any> {
+  if (zoteroInitialized && global.Zotero) {
+    return global.Zotero;
+  }
+  
+  const srcDir = path.join(__dirname, '..', 'src');
+  const modulesDir = path.join(__dirname, '..', 'modules', 'utilities');
+  
+  // Load Zotero core files in order
+  loadScript(path.join(srcDir, 'zotero.js'));
+  loadScript(path.join(srcDir, 'promise.js'));
+  
+  // Load utilities
+  loadScript(path.join(modulesDir, 'openurl.js'));
+  loadScript(path.join(modulesDir, 'date.js'));
+  loadScript(path.join(modulesDir, 'xregexp-all.js'));
+  loadScript(path.join(modulesDir, 'xregexp-unicode-zotero.js'));
+  loadScript(path.join(modulesDir, 'utilities.js'));
+  loadScript(path.join(modulesDir, 'utilities_item.js'));
+  loadScript(path.join(modulesDir, 'schema.js'));
+  loadScript(path.join(modulesDir, 'resource', 'zoteroTypeSchemaData.js'));
+  loadScript(path.join(modulesDir, 'cachedTypes.js'));
+  
+  loadScript(path.join(srcDir, 'utilities_translate.js'));
+  loadScript(path.join(srcDir, 'debug.js'));
+  loadScript(path.join(srcDir, 'http.js'));
+  loadScript(path.join(srcDir, 'translator.js'));
+  loadScript(path.join(srcDir, 'translators.js'));
+  loadScript(path.join(srcDir, 'repo.js'));
+  
+  // Load translation modules
+  const translationDir = path.join(srcDir, 'translation');
+  loadScript(path.join(translationDir, 'translate.js'));
+  loadScript(path.join(translationDir, 'sandboxManager.js'));
+  loadScript(path.join(translationDir, 'translate_item.js'));
+  
+  loadScript(path.join(srcDir, 'tlds.js'));
+  loadScript(path.join(srcDir, 'proxy.js'));
+  
+  // Load RDF
+  const rdfDir = path.join(srcDir, 'rdf');
+  loadScript(path.join(rdfDir, 'init.js'));
+  loadScript(path.join(rdfDir, 'uri.js'));
+  loadScript(path.join(rdfDir, 'term.js'));
+  loadScript(path.join(rdfDir, 'identity.js'));
+  loadScript(path.join(rdfDir, 'n3parser.js'));
+  loadScript(path.join(rdfDir, 'rdfparser.js'));
+  loadScript(path.join(rdfDir, 'serialize.js'));
+  
+  // Load Node.js specific implementations
+  const libDir = path.join(__dirname);
+  loadScript(path.join(libDir, 'node-implementations.js'));
+  
+  // Initialize schema
+  const schemaResponse = await fetch('https://api.zotero.org/schema');
+  const schemaData = await schemaResponse.json();
+  global.Zotero.Schema.init(schemaData);
+  
+  // Initialize date formats
+  const dateFormatsPath = path.join(modulesDir, 'resource', 'dateFormats.json');
+  const dateFormats = JSON.parse(fs.readFileSync(dateFormatsPath, 'utf-8'));
+  global.Zotero.Date.init(dateFormats);
+  
+  // Initialize debug logging
+  global.Zotero.Debug.init(1);
+  
+  // Initialize translators
+  await global.Zotero.Translators.init();
+  
+  zoteroInitialized = true;
+  return global.Zotero;
+}

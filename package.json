@@ -1,0 +1,51 @@
+{
+  "name": "zotero-translate",
+  "version": "1.0.0",
+  "description": "A standalone npm TypeScript library that provides metadata extraction from web pages using Zotero translators",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "directories": {
+    "example": "example"
+  },
+  "files": [
+    "dist",
+    "src",
+    "modules",
+    "translators",
+    "README.md",
+    "COPYING"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "download-translators": "node scripts/download-translators.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "zotero",
+    "metadata",
+    "translator",
+    "citation",
+    "bibliography",
+    "scraping"
+  ],
+  "author": "",
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "jsdom": "^27.2.0",
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThatXliner/zotero-translate.git"
+  }
+}
