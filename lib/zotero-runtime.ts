@@ -24,7 +24,12 @@ let zoteroInitialized = false;
  * Load and execute a JavaScript file in the global context
  */
 function loadScript(filepath: string): void {
-  const code = fs.readFileSync(filepath, 'utf-8');
+  let code = fs.readFileSync(filepath, 'utf-8');
+  
+  // Replace const/let declarations of key variables with global assignments
+  // This ensures they become truly global
+  code = code.replace(/^(const|let) (ZOTERO_CONFIG|TRANSLATOR_TYPES|TRANSLATOR_REQUIRED_PROPERTIES|TRANSLATOR_CACHING_PROPERTIES)\s*=/gm, 
+    (match, keyword, varName) => `globalThis.${varName} =`);
   
   // Temporarily hide module/require/process to force browser code path
   const savedModule = (global as any).module;
@@ -50,6 +55,15 @@ function loadScript(filepath: string): void {
       (global as any).process = savedProcess;
     }
   }
+}
+
+/**
+ * Load a Node.js specific script that needs require/module
+ */
+function loadNodeScript(filepath: string): void {
+  const code = fs.readFileSync(filepath, 'utf-8');
+  // Use direct eval to execute in this function's scope where require is available
+  eval(code);
 }
 
 /**
@@ -80,16 +94,18 @@ export async function initializeZotero(): Promise<any> {
   
   loadScript(path.join(srcDir, 'utilities_translate.js'));
   loadScript(path.join(srcDir, 'debug.js'));
-  loadScript(path.join(srcDir, 'http.js'));
+  // Use example/http.js, translators.js and translate_item.js which have the real implementations
+  const exampleDir = path.join(__dirname, '..', 'example');
+  loadScript(path.join(exampleDir, 'http.js'));
   loadScript(path.join(srcDir, 'translator.js'));
-  loadScript(path.join(srcDir, 'translators.js'));
+  loadScript(path.join(exampleDir, 'translators.js'));
   loadScript(path.join(srcDir, 'repo.js'));
   
   // Load translation modules
   const translationDir = path.join(srcDir, 'translation');
   loadScript(path.join(translationDir, 'translate.js'));
   loadScript(path.join(translationDir, 'sandboxManager.js'));
-  loadScript(path.join(translationDir, 'translate_item.js'));
+  loadScript(path.join(exampleDir, 'translate_item.js'));
   
   loadScript(path.join(srcDir, 'tlds.js'));
   loadScript(path.join(srcDir, 'proxy.js'));
@@ -105,18 +121,38 @@ export async function initializeZotero(): Promise<any> {
   loadScript(path.join(rdfDir, 'serialize.js'));
   
   // Load Node.js specific implementations
-  const libDir = path.join(__dirname);
-  loadScript(path.join(libDir, 'node-implementations.js'));
+  loadNodeScript(path.join(__dirname, '..', 'lib', 'node-implementations.js'));
   
-  // Initialize schema
-  const schemaResponse = await fetch('https://api.zotero.org/schema');
-  const schemaData = await schemaResponse.json();
-  global.Zotero.Schema.init(schemaData);
+  // Initialize schema (skip if network is unavailable)
+  try {
+    const schemaResponse = await fetch('https://api.zotero.org/schema');
+    const schemaData = await schemaResponse.json();
+    global.Zotero.Schema.init(schemaData);
+  } catch (e) {
+    console.warn('Warning: Could not fetch Zotero schema, some features may not work correctly');
+    // Initialize with minimal schema that has the required structure
+    global.Zotero.Schema.init({ 
+      version: 0, 
+      itemTypes: [], 
+      fields: [], 
+      creatorTypes: [],
+      csl: {
+        types: {},
+        fields: { text: {}, date: {} },
+        names: {}
+      }
+    });
+  }
   
   // Initialize date formats
   const dateFormatsPath = path.join(modulesDir, 'resource', 'dateFormats.json');
   const dateFormats = JSON.parse(fs.readFileSync(dateFormatsPath, 'utf-8'));
-  global.Zotero.Date.init(dateFormats);
+  try {
+    global.Zotero.Date.init(dateFormats);
+  } catch (e) {
+    console.error('Error initializing Zotero.Date:', e);
+    throw e;
+  }
   
   // Initialize debug logging
   global.Zotero.Debug.init(1);
